@@ -1,97 +1,182 @@
-## 🏁 Objective
-The primary goal of this project is to classify 50 different types of environmental sounds from the dataset provided.
-We approach this by transforming a **1D audio time series classification** problem into a **2D image classification** task using **Mel Spectrograms** and a **pre-trained CNN** model.
+# 🎧 Environmental Sound Classification with EfficientNet-B2
+
+This repository contains an end-to-end audio classification pipeline built using **PyTorch**, **torchaudio**, and **timm**.  
+The project focuses on classifying environmental sounds from the dataset (or similar structured datasets) using **mel spectrograms**, **delta features**, and **mixup augmentation**.  
+It includes a full cross-validation training pipeline and a test-time inference script for unseen audio clips.
 
 ---
 
-## 🧠 Overall Strategy
-Our strategy integrates **signal processing (time series concepts)** with **deep learning (image classification)**:
-
-1. Treat audio files as **1D time series data**.
-2. Apply **time-domain augmentations** to enrich the dataset.
-3. Convert each waveform into a **2D Mel Spectrogram** — a visual representation of frequencies over time.
-4. Feed these 2D spectrograms into a **pre-trained EfficientNet-B0** model for classification.
-
----
-
-## ⚙️ Key Components
-
-### 1. Time-Domain Augmentation (Raw Waveform)
-Before feature extraction, we manipulate the raw **1D waveform** to create diverse samples using `torch_audiomentations`.
-
-#### Techniques Used
-| Augmentation | Description | Purpose |
-|---------------|-------------|----------|
-| **Gain** | Randomly increases/decreases amplitude (volume). | Makes model volume-invariant. |
-| **AddColoredNoise** | Adds synthetic background noise (pink/white noise). | Simulates real-world noisy conditions. |
-| **PitchShift** | Shifts pitch up/down without altering speed. | Increases robustness to pitch variations. |
-| **Shift** | Shifts waveform in time domain. | Handles delays and alignment variations. |
-
-🧩 **Why it helps:**  
-These augmentations ensure the model focuses on the *essence* of the sound rather than recording conditions — improving generalization and preventing overfitting.
+## 🚀 Features
+- EfficientNet-B2 backbone for high-performance classification  
+- Mel-spectrogram + delta + delta-delta as 3-channel image inputs  
+- SpecAugment (time & frequency masking)  
+- Waveform augmentations using torch-audiomentations  
+- Mixup training for improved generalization  
+- 5-fold cross-validation  
+- Inference-ready pipeline for test datasets  
+- Reproducibility ensured with fixed seeds  
 
 ---
 
-### 2. Time-Frequency Analysis (Feature Extraction)
-Once augmented, the 1D waveform is converted into a **2D Mel Spectrogram** using `torchaudio.transforms.MelSpectrogram`.
+## 🧠 Model Overview
+The model converts each audio waveform into a 3-channel image:
+1. Mel-spectrogram  
+2. Delta (velocity)  
+3. Delta-Delta (acceleration)
 
-#### What Happens Internally
-- The waveform is divided into **small, overlapping windows** (`WIN_LENGTH`, `HOP_LENGTH`).
-- For each window, a **Short-Time Fourier Transform (STFT)** computes frequency information.
-- Frequencies are then **mapped to the Mel scale**, mimicking human hearing sensitivity.
-- The result is a 2D matrix:  
-  - **X-axis:** Time  
-  - **Y-axis:** Frequency bins  
-  - **Values:** Amplitude (in dB)
-
-📊 This conversion captures how frequency energy changes over time — enabling CNNs to recognize patterns similar to image textures.
+These are then resized and fed into **EfficientNet-B2** (from [timm](https://github.com/huggingface/pytorch-image-models)).
 
 ---
 
-### 3. Deep Learning Model (EfficientNet-B0)
-- We use a **pre-trained EfficientNet-B0** model from the `timm` library.
-- The first layer is modified to accept **1-channel (grayscale)** spectrograms instead of 3-channel RGB images.
-- Input spectrograms are resized to **224×224** before being passed into the network.
+---
 
-#### Training Details
-- **Loss Function:** CrossEntropy with label smoothing  
-- **Optimizer:** AdamW  
-- **Scheduler:** CosineAnnealingLR  
-- **Batch Size:** 32  
-- **Epochs:** 50  
+## ⚙️ Installation
+
+### 1️⃣ Clone this repository
+```
+git clone https://github.com/<your-username>/<repo-name>.git
+cd <repo-name>
+```
+
+### 2️⃣ Create a virtual environment
+```
+python -m venv venv
+source venv/bin/activate    # (Linux/Mac)
+venv\Scripts\activate       # (Windows)
+```
+
+### 3️⃣ Install dependencies
+```
+pip install -r requirements.txt
+```
+
+**Requirements:**
+- torch  
+- torchaudio  
+- timm  
+- torch-audiomentations  
+- librosa  
+- pandas  
+- numpy  
+- matplotlib  
+- seaborn  
+- tqdm  
 
 ---
 
-### 4. Evaluation Strategy (5-Fold Cross-Validation)
-We use the dataset’s predefined `fold` column for robust evaluation.
+## 🧩 Dataset Format
+The metadata CSV (e.g., `sound_50.csv`) should have the following columns:
 
-1. For each fold (1–5):
-   - Train on 4 folds.
-   - Validate on the remaining fold.
-2. Save the best model per fold.
-3. Compute the **average accuracy** across all folds.
+| filename           | fold | target | category  |
+|--------------------|-------|--------|------------|
+| 1-100032-A-0.wav   | 1     | 0      | dog_bark   |
+| 1-100038-A-14.wav  | 1     | 14     | rain       |
 
-This ensures the model’s performance is consistent and not dependent on a single split.
+Audio files are expected under:
+```
+DATA_PATH/audio/
+```
 
----
-
-## 📈 Summary of Time Series Concepts
-| Step | Concept | Implementation | Role |
-|------|----------|----------------|------|
-| **1** | Time-Domain Augmentation | Gain, Noise, PitchShift, Shift | Improves robustness to recording variability |
-| **2** | Time-Frequency Analysis | Mel Spectrogram (STFT + Mel scaling) | Converts 1D temporal data → 2D frequency-time data |
+Each sample should be ≤ 5 seconds, sampled at **44.1 kHz**.
 
 ---
 
-## 🧩 Tech Stack
-- **Python**
-- **PyTorch**
-- **Torchaudio**
-- **Torch Audiomentations**
-- **Timm (EfficientNet models)**
-- **Librosa**
-- **Matplotlib / Seaborn**
+## 🏋️‍♂️ Training
+To train using **5-fold cross-validation**, run the notebook cells in order.
+
+The training loop will:
+- Train on 4 folds and validate on the remaining one  
+- Save the best model for each fold (`best_model_fold_X.pth`)  
+- Print fold accuracies and overall average accuracy  
+
+Example output:
+```
+===== FOLD 1 =====
+Epoch 36/50 | Train Loss: 1.4147, Train Acc (mixup-aware): 0.8271 | Val Loss: 1.1687, Val Acc: 0.9025
+  -> New best validation accuracy: 0.9025. Model saved.
+
+Best validation accuracy for fold 1: 0.9025
+Average CV Accuracy: 0.9025 ± 0.018
+```
 
 ---
 
-## 📁 Project Structure
+## 🧪 Inference
+To run inference on unseen audio data:
+
+Update paths in the inference section:
+```
+TEST_AUDIO_PATH = "path/to/test_set"
+MODEL_PATH = "path/to/best_model_fold_2.pth"
+OUTPUT_CSV = "test_predictions.csv"
+```
+
+Run the inference cells in the notebook.
+
+Predictions will be saved as:
+```
+test_predictions.csv
+```
+
+**Sample Output:**
+| id              | prediction |
+|-----------------|-------------|
+| 7-280602-A-001  | 1           |
+| 7-280602-A-002  | 0           |
+
+---
+
+## 🧩 Key Components
+
+| Component | Description |
+|------------|-------------|
+| Dataset | Custom PyTorch dataset for training/validation |
+| TestDataset | Dataset for inference |
+| spec_transform | Mel-spectrogram + AmplitudeToDB |
+| delta_transform | Delta computation for temporal derivatives |
+| waveform_augmenter | Gain, Noise, PitchShift, and Shift |
+| mixup_data() | Mixup implementation |
+| train_one_epoch() / validate_one_epoch() | Training loop |
+| get_model() | Loads EfficientNet-B2 from timm |
+
+---
+
+## 📊 Results
+
+| Fold | Best Val Accuracy |
+|------|--------------------|
+| 1    | 0.83 |
+| 2    | 0.84 |
+| 3    | 0.82 |
+| 4    | 0.85 |
+| 5    | 0.83 |
+| **Average** | **0.834 ± 0.011** |
+
+*(Values shown as example placeholders; your actual results may differ.)*
+
+---
+
+## 💾 Output
+The final trained models are saved as:
+```
+best_model_fold_1.pth
+best_model_fold_2.pth
+...
+```
+
+Predictions for test data are saved in:
+```
+test_predictions2.csv
+```
+
+---
+
+## 💡 Tips
+- If you face CUDA OOM errors, reduce `CFG.BATCH_SIZE` or use a smaller model like `efficientnet_b0`.  
+- You can enable clean (non-mixup) training accuracy by setting:
+  ```
+  CFG.CLEAN_TRAIN_ACC = True
+  ```
+- Try different values of `CFG.MIXUP_ALPHA` for stronger regularization.
+
+---
