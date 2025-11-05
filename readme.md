@@ -145,14 +145,13 @@ test_predictions.csv
 
 | Fold | Best Val Accuracy |
 |------|--------------------|
-| 1    | 0.83 |
-| 2    | 0.84 |
-| 3    | 0.82 |
-| 4    | 0.85 |
-| 5    | 0.83 |
-| **Average** | **0.834 ± 0.011** |
+| 1    | 0.90 |
+| 2    | 0.89 |
+| 3    | 0.90 |
+| 4    | 0.90 |
+| 5    | 0.89 |
+| **Average** | **0.90 ± 0.011** |
 
-*(Values shown as example placeholders; your actual results may differ.)*
 
 ---
 
@@ -166,7 +165,7 @@ best_model_fold_2.pth
 
 Predictions for test data are saved in:
 ```
-test_predictions2.csv
+test_predictions.csv
 ```
 
 ---
