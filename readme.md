@@ -1,4 +1,4 @@
-# 🎧 Environmental Sound Classification with EfficientNet-B2
+# 🎧 Audio Classification with EfficientNet-B2
 
 This repository contains an end-to-end audio classification pipeline built using **PyTorch**, **torchaudio**, and **timm**.  
 The project focuses on classifying environmental sounds from the dataset (or similar structured datasets) using **mel spectrograms**, **delta features**, and **mixup augmentation**.  
